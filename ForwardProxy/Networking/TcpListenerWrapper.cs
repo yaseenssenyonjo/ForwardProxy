@@ -43,7 +43,6 @@ namespace ForwardProxy.Networking
             // Register the listener to be stopped
             // when the token is cancelled.
             token.Register(_tcpListener.Stop);
-           
 
             while (!token.IsCancellationRequested)
             {
