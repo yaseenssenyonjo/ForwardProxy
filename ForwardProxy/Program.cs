@@ -9,13 +9,16 @@ namespace ForwardProxy
     {
         private const int Port = 2468;
         
-        public static void Main(string[] args)
+        public static void Main()
         {
             var cancellationTokenSource = new CancellationTokenSource();
             
             // Start the proxy.
             var tcpListener = new TcpListenerWrapper(Port, new ProxyProtocol());
             tcpListener.AcceptTcpClients(cancellationTokenSource.Token);
+            
+            // Disable the proxy. (To ensure that the settings are the default.)
+            InternetSettings.DisableProxy();
             
             // Set the global proxy.
             InternetSettings.SetProxy("127.0.0.1", Port);
