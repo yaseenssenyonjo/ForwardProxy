@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 namespace ForwardProxy.Networking
 {
     /// <summary>
-    /// Provides the methods to be implemented for a TCP protocol.
+    /// Provides the contract to be implemented for TCP protocols.
     /// </summary>
     internal interface ITcpProtocol
     {
