@@ -7,30 +7,54 @@ using ForwardProxy.Networking.Responses;
 
 namespace ForwardProxy.Networking
 {
+    /// <summary>
+    /// Provides a wrapper for TCP clients.
+    /// </summary>
     internal class TcpClientWrapper
     {
+        /// <summary>
+        /// The underlying client.
+        /// </summary>
         private readonly TcpClient _tcpClient;
+        /// <summary>
+        /// The network stream.
+        /// </summary>
         private NetworkStream _networkStream;
         
+        /// <summary>
+        /// The buffer for data being read.
+        /// </summary>
         private byte[] _readBuffer = new byte[65536];
         
+        /// <summary>
+        /// Gets a value indicating whether the client is connected.
+        /// </summary>
         public bool IsConnected => _tcpClient.Connected;
         
+        /// <summary>
+        /// Initialises a new instance of the <see cref="TcpClientWrapper"/> class.
+        /// </summary>
         public TcpClientWrapper()
         {
             _tcpClient = new TcpClient();
         }
 
+        /// <summary>
+        /// Initialises a new instance of the <see cref="TcpClientWrapper"/> class.
+        /// </summary>
+        /// <param name="tcpClient"></param>
         public TcpClientWrapper(TcpClient tcpClient)
         {
             _tcpClient = tcpClient;
             _networkStream = _tcpClient.GetStream();
         }
-
-        // TODO: Exceptions currently get thrown into the void.
-        // Resolve it by adding try-catch statements.
-        // https://stackoverflow.com/questions/5383310/catch-an-exception-thrown-by-an-async-method
         
+        /// <summary>
+        /// Connects to the specified host and port asynchronously.
+        /// </summary>
+        /// <param name="host">The remote host.</param>
+        /// <param name="port">The port number.</param>
+        /// <returns>The task object that represents the asynchronous operation.</returns>
         public async Task<ConnectionResponse> Connect(string host, int port)
         {
             try
@@ -42,14 +66,14 @@ namespace ForwardProxy.Networking
             }
             catch (SocketException e)
             {
-                // TODO: Consider handling the e.SocketErrorCode
-                
                 return new ConnectionResponse(false, e.Message);
-                
-                //return false;
             }
         }
 
+        /// <summary>
+        /// Writes the specified data asynchronously.
+        /// </summary>
+        /// <param name="data">The data to write.</param>
         public async void Write(byte[] data)
         {
             if (!_networkStream.CanWrite) return;
@@ -60,25 +84,26 @@ namespace ForwardProxy.Networking
             }
             catch (Exception e) when (e is IOException || e is ObjectDisposedException)
             {
-                
+                // The exceptions thrown indicate that the stream failed to write
+                // data and that "CanWrite" flag was incorrectly true. The exceptions
+                // can be swallowed as the flags will have updated.
             }
         }
 
-        public async void Write(string data)
+        /// <summary>
+        /// Writes the specified data asynchronously.
+        /// </summary>
+        /// <param name="data">The data to write.</param>
+        public void Write(string data)
         {
-            if (!_networkStream.CanWrite) return;
-
-            try
-            {    
-                var writeBuffer = Encoding.ASCII.GetBytes(data);
-                await _networkStream.WriteAsync(writeBuffer, 0, writeBuffer.Length);
-            }
-            catch (Exception e) when (e is IOException || e is ObjectDisposedException)
-            {
-                
-            }
+            var writeBuffer = Encoding.ASCII.GetBytes(data);
+            Write(writeBuffer);
         }
 
+        /// <summary>
+        /// Reads a sequence of bytes from the stream asynchronously.
+        /// </summary>
+        /// <returns>The task object that represents the asynchronous read operation.</returns>
         public async Task<ReadResponse> Read()
         {
             if (!_networkStream.CanRead) return null;
@@ -91,10 +116,17 @@ namespace ForwardProxy.Networking
             }
             catch (Exception e) when (e is IOException || e is ObjectDisposedException)
             {
+                // The exceptions thrown indicate that the stream failed to read data.
+                // As a result, we just return null which is used to indicate that
+                // the connection has been closed.
+                
                 return null;
             }
         }
 
+        /// <summary>
+        /// Disposes the underlying client and closes the connection.
+        /// </summary>
         public void Close()
         {
             _tcpClient.Close();
