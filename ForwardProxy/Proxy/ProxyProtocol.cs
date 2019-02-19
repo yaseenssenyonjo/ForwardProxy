@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Net.Security;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using ForwardProxy.Networking;
@@ -8,6 +11,19 @@ namespace ForwardProxy.Proxy
 {
     internal class ProxyProtocol : ITcpProtocol
     {
+        private readonly bool _decryptHttpsTraffic;
+        private readonly X509Certificate _serverCertificate;
+
+        public ProxyProtocol()
+        {
+        }
+        
+        public ProxyProtocol(X509Certificate serverCertificate)
+        {
+            _decryptHttpsTraffic = true;
+            _serverCertificate = serverCertificate;
+        }
+        
         public async Task HandleClientAsync(TcpClientWrapper client, CancellationToken token)
         {
             var forwarder = new TcpClientWrapper();
@@ -56,6 +72,13 @@ namespace ForwardProxy.Proxy
                 if (headers.RequestLine.Method == "CONNECT")
                 {
                     client.Write("HTTP/1.1 200 Connection Established\r\n\r\n");
+                    
+                    // TODO: We may need to check if the port is 443 here. As it could be possible that the connection doesn't involve SSL.
+                    
+                    if (_decryptHttpsTraffic)
+                    {
+                        await DecryptHttpsTrafficAsync(client, forwarder, host);
+                    }
                 }
                 // Otherwise, forward the data sent by the client to the server.
                 else
@@ -83,6 +106,24 @@ namespace ForwardProxy.Proxy
                 // Attempting to use encoding to convert the data to a string will seemingly
                 // result in some data being lost as the proxy no longer function.
             }
+        }
+        
+        private async Task DecryptHttpsTrafficAsync(TcpClientWrapper client, TcpClientWrapper forwarder, string host)
+        {
+            // Wrap the existing client stream.
+            var clientSslStream = new SslStream(client.Stream, false);
+            // Authenticate this proxy server using our certificate.
+            await clientSslStream.AuthenticateAsServerAsync(_serverCertificate, false, 
+                SslProtocols.Tls | SslProtocols.Ssl3 | SslProtocols.Ssl2, true);
+            // Update the client stream.
+            client.Stream = clientSslStream;
+            
+            // Wrap the existing forwarder stream.
+            var forwarderSslStream = new SslStream(forwarder.Stream, false);
+            // Authenticate the forwarder as a client connecting to an SSL server.
+            await forwarderSslStream.AuthenticateAsClientAsync(host);
+            // Update the forwarder stream.
+            forwarder.Stream = forwarderSslStream;
         }
         
         private static string[] ParseUri(string uriString)

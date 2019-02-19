@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using ForwardProxy.Networking;
 using ForwardProxy.Proxy;
@@ -13,8 +14,11 @@ namespace ForwardProxy
         {
             var cancellationTokenSource = new CancellationTokenSource();
             
+            // Load the certificate.
+            var certificate = new X509Certificate2("./certificate.cer");
+            
             // Start the proxy.
-            var tcpListener = new TcpListenerWrapper(Port, new ProxyProtocol());
+            var tcpListener = new TcpListenerWrapper(Port, new ProxyProtocol(certificate));
             tcpListener.AcceptTcpClients(cancellationTokenSource.Token);
             
             // Disable the proxy. (To ensure that the settings are the default.)
