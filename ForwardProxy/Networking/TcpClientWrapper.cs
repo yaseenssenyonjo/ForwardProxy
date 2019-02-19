@@ -16,16 +16,16 @@ namespace ForwardProxy.Networking
         /// The underlying client.
         /// </summary>
         private readonly TcpClient _tcpClient;
-        /// <summary>
-        /// The network stream.
-        /// </summary>
-        private NetworkStream _networkStream;
         
         /// <summary>
         /// The buffer for data being read.
         /// </summary>
         private byte[] _readBuffer = new byte[65536];
         
+        /// <summary>
+        /// Gets or sets the underlying network stream.
+        /// </summary>
+        public Stream Stream { get; set; }
         /// <summary>
         /// Gets a value indicating whether the client is connected.
         /// </summary>
@@ -46,7 +46,7 @@ namespace ForwardProxy.Networking
         public TcpClientWrapper(TcpClient tcpClient)
         {
             _tcpClient = tcpClient;
-            _networkStream = _tcpClient.GetStream();
+            Stream = _tcpClient.GetStream();
         }
         
         /// <summary>
@@ -60,7 +60,7 @@ namespace ForwardProxy.Networking
             try
             {
                 await _tcpClient.ConnectAsync(host, port);
-                _networkStream = _tcpClient.GetStream();
+                Stream = _tcpClient.GetStream();
 
                 return new ConnectionResponse(true);
             }
@@ -76,11 +76,11 @@ namespace ForwardProxy.Networking
         /// <param name="data">The data to write.</param>
         public async void Write(byte[] data)
         {
-            if (!_networkStream.CanWrite) return;
+            if (!Stream.CanWrite) return;
             
             try
             {    
-                await _networkStream.WriteAsync(data, 0, data.Length);
+                await Stream.WriteAsync(data, 0, data.Length);
             }
             catch (Exception e) when (e is IOException || e is ObjectDisposedException)
             {
@@ -106,11 +106,11 @@ namespace ForwardProxy.Networking
         /// <returns>The task object that represents the asynchronous read operation.</returns>
         public async Task<ReadResponse> Read()
         {
-            if (!_networkStream.CanRead) return null;
+            if (!Stream.CanRead) return null;
 
             try
             {
-                var numberOfBytesRead = await _networkStream.ReadAsync(_readBuffer, 0, _readBuffer.Length);
+                var numberOfBytesRead = await Stream.ReadAsync(_readBuffer, 0, _readBuffer.Length);
                 Array.Resize(ref _readBuffer, numberOfBytesRead); 
                 return numberOfBytesRead == 0 ? null : new ReadResponse(_readBuffer);
             }
