@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
@@ -86,20 +87,33 @@ namespace ForwardProxy.Networking
             {
                 // The exceptions thrown indicate that the stream failed to write
                 // data and that "CanWrite" flag was incorrectly true. The exceptions
-                // can be swallowed as the flags will have updated.
+                // can be swallowed as the flag will have updated.
             }
         }
 
         /// <summary>
-        /// Writes the specified data asynchronously.
+        /// Writes the specified data followed by the line terminator asynchronously.
         /// </summary>
-        /// <param name="data">The data to write.</param>
-        public void Write(string data)
+        /// <param name="data"></param>
+        public void WriteLine(string data)
         {
-            var writeBuffer = Encoding.ASCII.GetBytes(data);
-            Write(writeBuffer);
+            Write(Encoding.ASCII.GetBytes(data + "\r\n"));
         }
-
+        
+        /// <summary>
+        /// Writes the specified lines asynchronously.
+        /// </summary>
+        /// <param name="lines">The header lines to write.</param>
+        public void WriteHeaders(params string[] lines)
+        {
+            foreach (var line in lines)
+            {
+                WriteLine(line);
+            }
+            
+            WriteLine(string.Empty);
+        }
+        
         /// <summary>
         /// Reads a sequence of bytes from the stream asynchronously.
         /// </summary>
