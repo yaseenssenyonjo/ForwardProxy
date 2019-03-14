@@ -13,12 +13,9 @@ namespace ForwardProxy
         public static void Main()
         {
             var cancellationTokenSource = new CancellationTokenSource();
-            
-            // Load the certificate.
-            var certificate = new X509Certificate2("./certificate.cer");
-            
+
             // Start the proxy.
-            var tcpListener = new TcpListenerWrapper(Port, new ProxyProtocol(certificate));
+            var tcpListener = new TcpListenerWrapper(Port, new ProxyProtocol(true));
             tcpListener.AcceptTcpClients(cancellationTokenSource.Token);
             
             // Disable the proxy. (To ensure that the settings are the default.)
